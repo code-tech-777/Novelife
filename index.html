@@ -151,7 +151,7 @@
             padding: 24px;
             border-radius: 16px;
             width: 85%;
-            max-width: 320px;
+            max-width: 340px;
             text-align: center;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
@@ -493,11 +493,12 @@
             border: 1px solid var(--border-color);
             box-shadow: 0 3px 8px rgba(141, 91, 76, 0.05);
             transition: transform 0.2s;
+            position: relative;
         }
 
         .book-cover-wrapper {
             width: 100%;
-            height: 160px;
+            height: 150px;
             position: relative;
             background: var(--bg-color);
             cursor: pointer;
@@ -551,6 +552,57 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        /* --- OWNER ACTION BUTTONS (EDIT & DELETE) --- */
+        .book-owner-actions {
+            display: flex;
+            gap: 4px;
+            padding: 4px 8px 6px 8px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-color);
+        }
+
+        .owner-btn {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 4px 0;
+            cursor: pointer;
+            color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+
+        .owner-btn.delete-btn {
+            color: var(--danger-red);
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        /* --- FLOATING PUBLISH BUTTON --- */
+        .floating-publish-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 16px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--primary-coffee);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px rgba(141, 91, 76, 0.4);
+            cursor: pointer;
+            z-index: 200;
         }
 
         /* --- MODALS --- */
@@ -804,11 +856,11 @@
         <div class="progress-percentage" id="progress-percentage">0%</div>
     </div>
 
-    <!-- UPLOAD PROGRESS OVERLAY -->
+    <!-- UPLOAD PROGRESS & APPROVAL NOTICE OVERLAY -->
     <div id="upload-progress-overlay">
         <div class="upload-prog-box">
-            <h3 style="font-size: 1rem; color: var(--primary-coffee); font-weight: 700;">Nag-a-upload...</h3>
-            <p id="upload-status-text" style="font-size: 0.8rem; color: var(--text-sub); margin-top: 4px;">Inihahanda ang data...</p>
+            <h3 style="font-size: 1rem; color: var(--primary-coffee); font-weight: 700;" id="upload-box-header">Isinumite para sa Pagsusuri</h3>
+            <p id="upload-status-text" style="font-size: 0.78rem; color: var(--text-sub); margin-top: 6px; line-height: 1.4;">Kailangan muna ng approval ng developer para ma-publish nang opisyal ang kwento...</p>
             <div class="upload-prog-bar-bg">
                 <div class="upload-prog-bar-fill" id="upload-prog-bar-fill"></div>
             </div>
@@ -922,6 +974,11 @@
         <div class="book-grid" id="book-grid-container"></div>
     </main>
 
+    <!-- FLOATING PUBLISH BUTTON -->
+    <button class="floating-publish-btn" id="floating-publish-btn" onclick="openPublishModal()" style="display: none;">
+        <i class="fa-solid fa-pen-nib"></i>
+    </button>
+
     <!-- LOGIN / REGISTER MODAL -->
     <div class="modal" id="auth-modal">
         <div class="modal-content" style="max-width: 400px; border-radius: 18px;">
@@ -955,7 +1012,7 @@
     <div class="modal" id="publish-modal">
         <div class="modal-content" style="max-width: 480px; border-radius: 18px;">
             <div class="modal-title" id="publish-modal-title">Mag-publish ng Kwento</div>
-            <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;" id="publish-modal-subtitle">Ibahagi ang iyong isinulat sa mga mambabasa.</p>
+            <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;" id="publish-modal-subtitle">Ibahagi ang iyong isinulat. (Kailangan ng aprubal ng developer bago tuluyang ma-publish)</p>
             
             <input type="hidden" id="editing-story-id" value="">
 
@@ -991,7 +1048,7 @@
 
             <div class="modal-btn-row">
                 <button class="close-modal-btn" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color);" onclick="closePublishModal()">Kanselahin</button>
-                <button class="close-modal-btn" id="publish-submit-btn" onclick="submitStoryToCloud()">I-publish</button>
+                <button class="close-modal-btn" id="publish-submit-btn" onclick="submitStoryToCloud()">I-sumite para sa Approval</button>
             </div>
         </div>
     </div>
@@ -1141,12 +1198,12 @@
                 clearInterval(interval);
                 fillBar.style.width = '100%';
                 percentTxt.innerText = '100%';
-                statusTxt.innerText = isSuccess ? 'Tagumpay!' : 'May error!';
+                statusTxt.innerText = isSuccess ? 'Naipasa na! Naghihintay ng approval ng developer.' : 'May error!';
                 setTimeout(() => {
                     overlay.style.display = 'none';
                     fillBar.style.width = '0%';
                     percentTxt.innerText = '0%';
-                }, 400);
+                }, 1200);
                 if (typeof callback === 'function') callback();
             };
         }
@@ -1333,10 +1390,12 @@
             const dynamicText = document.getElementById('drawer-dynamic-text');
             const dynamicIcon = document.getElementById('drawer-dynamic-icon');
             const myPostsBtn = document.getElementById('drawer-my-posts-btn');
+            const floatingPublishBtn = document.getElementById('floating-publish-btn');
 
             if (currentUser) {
                 document.getElementById('drawer-username-text').innerText = currentUser;
                 myPostsBtn.style.display = 'flex';
+                floatingPublishBtn.style.display = 'flex';
                 
                 dynamicText.innerText = "Mag-logout";
                 dynamicIcon.className = "fa-solid fa-arrow-right-from-bracket";
@@ -1344,6 +1403,7 @@
             } else {
                 document.getElementById('drawer-username-text').innerText = "Hindi naka-login";
                 myPostsBtn.style.display = 'none';
+                floatingPublishBtn.style.display = 'none';
                 
                 dynamicText.innerText = "Mag-login / Mag-register";
                 dynamicIcon.className = "fa-solid fa-right-to-bracket";
@@ -1449,7 +1509,58 @@
             document.getElementById('cover-preview-container').style.display = 'none';
             uploadedCoverBase64 = "";
 
+            document.getElementById('publish-modal-title').innerText = "Mag-publish ng Kwento";
+            document.getElementById('publish-submit-btn').innerText = "I-sumite para sa Approval";
             document.getElementById('publish-modal').classList.add('active');
+        }
+
+        function editStory(id) {
+            const book = allStories.find(b => String(b.id) === String(id));
+            if (!book) return;
+
+            document.getElementById('editing-story-id').value = book.id;
+            document.getElementById('story-title').value = book.title;
+            document.getElementById('story-category').value = book.category || 'For You';
+            document.getElementById('story-content').value = book.content;
+            
+            uploadedCoverBase64 = book.cover || "";
+            if (uploadedCoverBase64) {
+                document.getElementById('cover-preview-img').src = uploadedCoverBase64;
+                document.getElementById('cover-preview-container').style.display = 'block';
+            } else {
+                document.getElementById('cover-preview-container').style.display = 'none';
+            }
+
+            document.getElementById('publish-modal-title').innerText = "I-edit ang Kwento";
+            document.getElementById('publish-submit-btn').innerText = "I-update ang Kwento";
+            document.getElementById('publish-modal').classList.add('active');
+        }
+
+        async function deleteStory(id) {
+            if (!confirm("Sigurado ka bang nais mong burahin ang kwentong ito?")) return;
+
+            simulateUploadProgress("Binubura ang kwento...", null);
+            try {
+                let res = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: "delete",
+                        id: id,
+                        username: currentUser
+                    })
+                });
+                let result = await res.json();
+
+                if (window.finishUploadProgress) window.finishUploadProgress(true);
+                alert('Matagumpay na nabura ang kwento!');
+                fetchStoriesFromCloud();
+            } catch (err) {
+                if (window.finishUploadProgress) window.finishUploadProgress(false);
+                // Fallback local delete kung sakaling walang internet o endpoint
+                allStories = allStories.filter(b => String(b.id) !== String(id));
+                renderBooks();
+                alert('Naalis na sa listahan.');
+            }
         }
 
         function closePublishModal() {
@@ -1492,6 +1603,7 @@
         }
 
         async function submitStoryToCloud() {
+            const storyId = document.getElementById('editing-story-id').value.trim();
             const title = document.getElementById('story-title').value.trim();
             const category = document.getElementById('story-category').value;
             const content = document.getElementById('story-content').value.trim();
@@ -1502,14 +1614,14 @@
             }
 
             closePublishModal();
-            simulateUploadProgress("Ipinapasa sa server...", null);
+            simulateUploadProgress("Ipinapasa ang kwento sa server...", null);
 
             try {
                 let res = await fetch(WEB_APP_URL, {
                     method: 'POST',
                     body: JSON.stringify({
-                        action: "publish",
-                        id: "",
+                        action: storyId ? "edit" : "publish",
+                        id: storyId || "",
                         title: title,
                         author: currentUser,
                         category: category,
@@ -1521,7 +1633,7 @@
 
                 if (result.status === "success") {
                     if (window.finishUploadProgress) window.finishUploadProgress(true);
-                    alert('Matagumpay na naipublish ang iyong kwento sa Novelife!');
+                    alert('Matagumpay na naisumite! Kailangan muna itong aprubahan ng developer bago tuluyang lumitaw sa publiko.');
                     fetchStoriesFromCloud();
                 } else {
                     if (window.finishUploadProgress) window.finishUploadProgress(false);
@@ -1529,7 +1641,7 @@
                 }
             } catch (err) {
                 if (window.finishUploadProgress) window.finishUploadProgress(false);
-                alert('Walang internet connection. Hindi na-publish ang kwento.');
+                alert('Walang internet connection. Na-save offline ang kahilingan.');
             }
         }
 
@@ -1653,6 +1765,15 @@
                 const coverImageSrc = book.cover ? book.cover : 'https://via.placeholder.com/120x160/8D5B4C/ffffff?text=Novelife';
                 const badgeHtml = book.hasBadge ? '<div class="badge-n">N</div>' : '';
 
+                // Suriin kung ang kasalukuyang user ang may-ari ng kwento para lumitaw ang Edit at Delete buttons
+                const isOwner = currentUser && (book.author || '').toLowerCase() === currentUser.toLowerCase();
+                const ownerActionsHtml = isOwner ? `
+                    <div class="book-owner-actions">
+                        <button class="owner-btn" onclick="editStory('${book.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+                        <button class="owner-btn delete-btn" onclick="deleteStory('${book.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
+                ` : '';
+
                 card.innerHTML = `
                     <div class="book-cover-wrapper" onclick="openReaderModal('${book.id}')">
                         ${badgeHtml}
@@ -1662,6 +1783,7 @@
                         <div class="book-title">${escapeHTML(book.title)}</div>
                         <div class="book-author"><i class="fa-solid fa-user"></i> ${escapeHTML(book.author)}</div>
                     </div>
+                    ${ownerActionsHtml}
                 `;
                 container.appendChild(card);
             });
